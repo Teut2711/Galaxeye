@@ -1,14 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useRef } from "react";
 import "./App.css";
 import { MapContainer, TileLayer, Polygon, useMapEvents } from "react-leaflet";
-function getRandomColor() {
-  const letters = "0123456789ABCDEF";
-  let color = "#";
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
-}
+
+import { Bars } from "react-loader-spinner";
+
 async function getTiles(inputTile) {
   try {
     console.log(inputTile);
@@ -47,9 +42,8 @@ function MapEventsHandler({ onLocationClicked }) {
 
   return null;
 }
-
-function App() {
-  const [userInputTile, setUserInputTile] = useState({
+function getInitialState() {
+  return {
     type: "Feature",
     properties: {
       fill: "#00f",
@@ -58,66 +52,136 @@ function App() {
       type: "Polygon",
       coordinates: [[]],
     },
-  });
-  const [tiles, setTiles] = useState([]);
-
-  const handleLocationClicked = async (latlng) => {
-    if (userInputTile.geometry.coordinates[0].length === 4) {
-      try {
-        console.info("Fetching tiles...");
-        const response = await getTiles(userInputTile);
-        setTiles(response.data);
-      } catch (err) {
-        console.log(err.message);
-      }
-    } else {
-      setUserInputTile({
-        ...userInputTile,
-        geometry: {
-          ...userInputTile.geometry,
-          coordinates: [
-            [
-              ...userInputTile.geometry.coordinates[0],
-              [latlng.lng, latlng.lat],
-            ],
-          ],
-        },
-      });
-    }
   };
+}
 
-  return (
-    <MapContainer
-      center={[15.3173, 75.7139]}
-      zoom={10}
-      scrollWheelZoom={true}
-      style={{ height: "100vh", width: "100%" }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <MapEventsHandler onLocationClicked={handleLocationClicked} />
-      <Polygon
-        pathOptions={{ color: "purple" }}
-        positions={userInputTile.geometry.coordinates[0].map((e) => ({
+function Wrapper({ isLoading, children }) {
+  return isLoading ? (
+    <Bars
+      height="80"
+      width="80"
+      color="#4fa94d"
+      ariaLabel="bars-loading"
+      wrapperStyle={{}}
+      wrapperClass=""
+      visible={true}
+    />
+  ) : (
+    children
+  );
+}
+function App() {
+  const [userInputTile, setUserInputTile] = useState(() => getInitialState());
+  const [isLoading, setLoading] = useState(false);
+  const [tiles, setTiles] = useState([]);
+  const mapRef = useRef(null);
+  const map = mapRef.current;
+
+  const handleReset = () => {
+    setUserInputTile(() => getInitialState());
+    setTiles([]);
+  };
+  const handleLocationClicked = async (latlng) => {
+    setUserInputTile({
+      ...userInputTile,
+      geometry: {
+        ...userInputTile.geometry,
+        coordinates: [
+          [...userInputTile.geometry.coordinates[0], [latlng.lng, latlng.lat]],
+        ],
+      },
+    });
+  };
+  const handleAPICall = async () => {
+    try {
+      console.info("Fetching tiles...");
+      setLoading(true);
+      const response = await getTiles(userInputTile);
+      setLoading(false);
+      setTiles(response.data);
+    } catch (err) {
+      console.log(err.message);
+      setLoading(false);
+      map.flyTo(
+        userInputTile.geometry.coordinates[0].map((e) => ({
           lat: e[1],
           lng: e[0],
-        }))}
-      />
-      {tiles.map((tile, i) => {
-        return (
+        }))
+      );
+    }
+  };
+  const styles = {
+    backgroundColor: "purple",
+    margin: "10px",
+    color: "white",
+    padding: "12px 20px",
+    border: "none",
+    borderRadius: "5px",
+    boxShadow: "0px 2px 5px rgba(0, 0, 0, 0.2)",
+    cursor: "pointer",
+    width: "200px",
+  };
+  return (
+    <div
+      style={{
+        paddingTop: "20px",
+
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <Wrapper isLoading={isLoading}>
+        <MapContainer
+          center={[15.3173, 75.7139]}
+          zoom={10}
+          scrollWheelZoom={true}
+          style={{ height: "90vh", width: "90%" }}
+          ref={mapRef}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <MapEventsHandler onLocationClicked={handleLocationClicked} />
           <Polygon
-            key={i}
-            pathOptions={{ color: getRandomColor() }}
-            positions={tile.geometry.coordinates[0].map((e) => ({
+            pathOptions={{ color: "purple" }}
+            positions={userInputTile.geometry.coordinates[0].map((e) => ({
               lat: e[1],
               lng: e[0],
             }))}
           />
-        );
-      })}
-    </MapContainer>
+          {tiles.map((tile, i) => {
+            return (
+              <Polygon
+                key={i}
+                pathOptions={{ color: "rgb(255, 0, 0)" }}
+                positions={tile.geometry.coordinates[0].map((e) => ({
+                  lat: e[1],
+                  lng: e[0],
+                }))}
+              />
+            );
+          })}
+        </MapContainer>
+        <div
+          style={{
+            width: "80%",
+            display: "flex",
+            justifyContent: "space-evenly",
+            alignItems: "center",
+          }}
+        >
+          <button onClick={handleAPICall} style={styles}>
+            Get matching tiles!
+          </button>{" "}
+          <button onClick={handleReset} style={styles}>
+            Reset!
+          </button>{" "}
+        </div>
+      </Wrapper>
+    </div>
   );
 }
 
