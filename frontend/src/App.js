@@ -6,9 +6,9 @@ import { Bars } from "react-loader-spinner";
 
 async function getTiles(inputTile) {
   try {
-    console.log(inputTile);
+    console.log("API :", process.env.REACT_APP_BACKEND_API);
     const response = await fetch(
-      process.env.BACKEND_API || "http://localhost:8000/api/v1/tile",
+      process.env.REACT_APP_BACKEND_API || "http://localhost:8000/api/v1/tile",
       {
         method: "POST",
         headers: {
@@ -23,6 +23,7 @@ async function getTiles(inputTile) {
 
     if (response.ok) {
       const data = await response.json();
+      console.info("Data is: ", data);
       // Handle the response data
       return data;
     } else {

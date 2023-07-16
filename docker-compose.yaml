@@ -5,28 +5,34 @@ services:
     container_name: mongodb
     environment:
       - MONGO_INITDB_DATABASE=galaxeye
-    ports:
-      - 27017:27017  
+    # ports:
+    #   - 27017:27017  
     volumes:
       - ./data:/data/db
-    restart: always
+    restart: on-failure
 
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: frontend
-  #   environment:
-  #     - BACKEND_API=http://backend:8000
-  #   ports:
-  #     - 8000:3000
-  #   restart: always
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    environment:
+      - REACT_APP_BACKEND_API=http://localhost:8000/api/v1/tile
+    ports:
+      - 3000:3000
+    depends_on:
+      - backend    
+    restart: on-failure
 
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   environment:
-  #     - DATABASE_URI=mongodb://mongodb:27017/galaxeye  
-  #   container_name: backend
-  #   restart: always
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000  
+    environment:
+      - DATABASE_URI=mongodb://mongodb:27017/galaxeye  
+    depends_on:
+      - mongodb  
+    container_name: backend
+    restart: on-failure

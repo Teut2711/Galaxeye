@@ -4,6 +4,7 @@ const path = require("path");
 const Feature = require("./models");
 
 const url = process.env.DATABASE_URI || "mongodb://localhost:27017/galaxeye";
+console.info("Mongo url: ", url);
 
 async function connectToDatabase() {
   try {

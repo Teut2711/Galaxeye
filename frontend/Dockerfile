@@ -7,7 +7,8 @@ COPY . .
 # Install dependencies
 RUN npm install
 
-EXPOSE 8000
+EXPOSE 3000
 
 # Start the application
 CMD [ "npm", "start" ]
+
